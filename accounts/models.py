@@ -1,3 +1,4 @@
+from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager
@@ -5,14 +6,16 @@ from django.contrib.auth.models import (
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, full_name=None, password=None, is_active=True, is_staff=False, is_admin=False):
+    def create_user(self, email, first_name=None, last_name=None, mobile_number=None, password=None, is_active=True, is_staff=False, is_admin=False):
         if not email:
             raise ValueError("Users must have an email address")
         if not password:
             raise ValueError("Users must have a password")
         user_obj = self.model(
             email = self.normalize_email(email),
-            full_name=full_name
+            first_name=first_name,
+            last_name=last_name,
+            mobile_number=mobile_number
         )
         user_obj.set_password(password) # change user password
         user_obj.staff = is_staff
@@ -21,19 +24,23 @@ class UserManager(BaseUserManager):
         user_obj.save(using=self._db)
         return user_obj
 
-    def create_staffuser(self, email,full_name=None, password=None):
+    def create_staffuser(self, email, first_name=None, last_name=None, mobile_number=None, password=None):
         user = self.create_user(
                 email,
-                full_name=full_name,
+                first_name=first_name,
+                last_name=last_name,
+                mobile_number=mobile_number,
                 password=password,
                 is_staff=True
         )
         return user
 
-    def create_superuser(self, email, full_name=None, password=None):
+    def create_superuser(self, email, first_name=None, last_name=None, mobile_number=None, password=None):
         user = self.create_user(
                 email,
-                full_name=full_name,
+                first_name=first_name,
+                last_name=last_name,
+                mobile_number=mobile_number,
                 password=password,
                 is_staff=True,
                 is_admin=True
@@ -42,27 +49,36 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser):
-    email       = models.EmailField(max_length=255, unique=True)
-    full_name   = models.CharField(max_length=255, blank=True, null=True)
-    active      = models.BooleanField(default=True) # can login 
-    staff       = models.BooleanField(default=False) # staff user non superuser
-    admin       = models.BooleanField(default=False) # superuser 
-    timestamp   = models.DateTimeField(auto_now_add=True)
+    email         = models.EmailField(max_length=255, unique=True)
+    first_name    = models.CharField(max_length=255, blank=True, null=True)
+    last_name     = models.CharField(max_length=255, blank=True, null=True)
+    mobile_number = models.CharField(max_length=10, validators=[RegexValidator(r'^\d{1,10}$')])
+    active        = models.BooleanField(default=True) # can login 
+    staff         = models.BooleanField(default=False) # staff user non superuser
+    admin         = models.BooleanField(default=False) # superuser 
+    timestamp     = models.DateTimeField(auto_now_add=True)
     # confirm     = models.BooleanField(default=False)
     # confirmed_date     = models.DateTimeField(default=False)
 
     USERNAME_FIELD = 'email' #username
     # USERNAME_FIELD and password are required by default
-    REQUIRED_FIELDS = [] #['full_name'] #python manage.py createsuperuser
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'mobile_number'] #['full_name'] #python manage.py createsuperuser
 
     objects = UserManager()
 
     def __str__(self):
         return self.email
 
-    def get_full_name(self):
-        if self.full_name:
-            return self.full_name
+
+    def get_first_name(self):
+        return self.first_name
+
+    def get_last_name(self):
+        return self.last_name
+
+    def get_mobile_number(self):
+        if self.mobile_number:
+            return self.mobile_number
         return self.email
 
     def get_short_name(self):

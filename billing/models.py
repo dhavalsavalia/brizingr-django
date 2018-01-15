@@ -1,3 +1,4 @@
+from django.core.validators import RegexValidator
 from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_save, pre_save
@@ -24,8 +25,14 @@ class BillingProfileManager(models.Manager):
         obj = None
         if user.is_authenticated():
             'logged in user checkout; remember payment stuff'
-            obj, created = self.model.objects.get_or_create(
-                            user=user, email=user.email)
+            obj, created = BillingProfile.objects.get_or_create(
+                            user=user, 
+                            email=user.email,
+                            first_name=str(user.first_name),
+                            last_name=str(user.last_name),
+                            mobile_number=str(user.mobile_number)
+                            )
+            print(obj, created)
         elif guest_email_id is not None:
             'guest user checkout; auto reloads payment stuff'
             guest_email_obj = GuestEmail.objects.get(id=guest_email_id)
@@ -36,12 +43,15 @@ class BillingProfileManager(models.Manager):
         return obj, created
 
 class BillingProfile(models.Model):
-    user        = models.OneToOneField(User, null=True, blank=True)
-    email       = models.EmailField()
-    active      = models.BooleanField(default=True)
-    update      = models.DateTimeField(auto_now=True)
-    timestamp   = models.DateTimeField(auto_now_add=True)
-    customer_id = models.CharField(max_length=120, null=True, blank=True)
+    user          = models.OneToOneField(User, null=True, blank=True)
+    email         = models.EmailField()
+    first_name    = models.CharField(max_length=255, blank=True, null=True)
+    last_name     = models.CharField(max_length=255, blank=True, null=True)
+    mobile_number = models.CharField(max_length=10, validators=[RegexValidator(r'^\d{1,10}$')], blank=True, null=True)
+    active        = models.BooleanField(default=True)
+    update        = models.DateTimeField(auto_now=True)
+    timestamp     = models.DateTimeField(auto_now_add=True)
+    customer_id   = models.CharField(max_length=120, null=True, blank=True)
 
     objects = BillingProfileManager()
 
@@ -53,16 +63,16 @@ class BillingProfile(models.Model):
 
 def billing_profile_created_receiver(sender, instance, *args, **kwargs):
     if not instance.customer_id and instance.email:
-        print("ACTUAL API REQUEST Send to stripe/braintree")
+        # print("ACTUAL API REQUEST Send to stripe/braintree")
         customer = juspayp3.Customers.create(
                     object_reference_id = instance.email, 
-                    mobile_number = '9988776655', 
+                    mobile_number = instance.mobile_number,
                     email_address = instance.email,
-                    first_name = 'dhaval',
-                    last_name = 'savalia',
+                    first_name = instance.first_name,
+                    last_name = instance.last_name,
                     mobile_country_code = '91'
             )
-        print(vars(customer))
+        # print(vars(customer))
         instance.customer_id = customer.id
 
 pre_save.connect(billing_profile_created_receiver, sender=BillingProfile)
@@ -70,7 +80,12 @@ pre_save.connect(billing_profile_created_receiver, sender=BillingProfile)
 
 def user_created_receiver(sender, instance, created, *args, **kwargs):
     if created and instance.email:
-        BillingProfile.objects.get_or_create(user=instance, email=instance.email)
+        BillingProfile.objects.get_or_create(user=instance, 
+                                             email=instance.email,
+                                             first_name = instance.first_name,
+                                             last_name = instance.last_name,
+                                             mobile_number = instance.mobile_number,
+                                             )
 
 post_save.connect(user_created_receiver, sender=User)
 

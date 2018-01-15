@@ -42,7 +42,7 @@ class Order(models.Model):
     billing_address     = models.ForeignKey(Address, related_name="billing_address", null=True, blank=True)
     cart                = models.ForeignKey(Cart)
     status              = models.CharField(max_length=120, default='created', choices=ORDER_STATUS_CHOICES)
-    shipping_total      = models.DecimalField(default=5.99, max_digits=100, decimal_places=2)
+    shipping_total      = models.DecimalField(default=50, max_digits=100, decimal_places=2)
     total               = models.DecimalField(default=0.00, max_digits=100, decimal_places=2)
     active              = models.BooleanField(default=True)
 
@@ -101,9 +101,7 @@ post_save.connect(post_save_cart_total, sender=Cart)
 
 
 def post_save_order(sender, instance, created, *args, **kwargs):
-    print("running")
     if created:
-        print("Updating... first")
         instance.update_total()
 
 
