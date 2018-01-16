@@ -69,8 +69,8 @@
             <p>Shipping Address: {{ object.shipping_address.get_address }}</p>
             <p>Billing Address: {{ object.shipping_address.get_address }}</p>
             <p>Cart Total: {{ object.cart.total }}</p>
-            <p>Shipping Total: {{ object.shipping_total }}</p>
-            <p>Order Total: {{ object.total }}</p>
+            <p>Shipping Total: &#8377;{{ object.shipping_total }}</p>
+            <p>Order Total: &#8377;{{ object.total }}</p>
             <a class='btn btn-success' href="{{ link }}">Checkout</a>
 <!--             <form class='form' method='POST' action="">{% csrf_token %}
                 <button type='submit' class='btn btn-success'>Checkout</button>
